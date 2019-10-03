@@ -38,19 +38,14 @@ func (s *Semaphore) TryAcquire() bool {
 
 /* 尝试指定时间内获取许可 */
 func (s *Semaphore) TryAcquireOnTime(timeout time.Duration) bool {
-	for i := 0; i < 2; i++ {
+	for {
 		select {
 		case s.channel <- 0:
 			return true
-		default:
-			if i == 0 {
-				time.Sleep(timeout)
-			} else {
-				break
-			}
+		case <-time.After(timeout):
+			return false
 		}
 	}
-	return false
 }
 
 /* 当前可用的许可数 */
