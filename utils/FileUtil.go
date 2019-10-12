@@ -76,7 +76,7 @@ func ReadFile(filePath string) ([]byte, error) {
 
 /* 内容写入目标文件 */
 func WriteFile(b []byte, destPath string) (bool, error) {
-	file, err := os.OpenFile(destPath, os.O_WRONLY, 0666)
+	file, err := os.OpenFile(destPath, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		return false, err
 	}

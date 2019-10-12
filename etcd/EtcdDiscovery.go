@@ -75,7 +75,7 @@ func (e *EtcdDiscovery) watcher(prefixName string) error {
 			select {
 			case resp := <-e.client.Watch(context.Background(), prefixName, clientv3.WithPrefix()):
 				if nil != resp.Err() {
-					return
+					panic(resp.Err())
 				}
 				for _, ev := range resp.Events {
 					switch ev.Type {

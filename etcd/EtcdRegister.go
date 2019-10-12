@@ -15,7 +15,7 @@ type EtcdRegister struct {
 	lease         clientv3.Lease
 	leaseResp     *clientv3.LeaseGrantResponse
 	keepAliveChan <-chan *clientv3.LeaseKeepAliveResponse
-	cancelFunc    func()
+	cancelFunc    func() // 关闭续租回调
 }
 
 /* 创建服务注册实例 */
@@ -48,7 +48,7 @@ func (e *EtcdRegister) Register(key string, val string) (bool, error) {
 /* 撤销租约 */
 func (e *EtcdRegister) RevokeLease() (bool, error) {
 	e.cancelFunc()
-	time.Sleep(3 * time.Second)
+	time.Sleep(1 * time.Second)
 	_, err := e.lease.Revoke(context.TODO(), e.leaseResp.ID)
 	if err != nil {
 		return false, err
@@ -58,12 +58,20 @@ func (e *EtcdRegister) RevokeLease() (bool, error) {
 
 /* 监听续租情况 */
 func (e *EtcdRegister) AddLeaseListener(invokeHandler func(resp clientv3.LeaseKeepAliveResponse)) {
-	for {
-		select {
-		case rsp := <-e.keepAliveChan:
-			go invokeHandler(*rsp)
+	go func() {
+		for {
+			select {
+			case rsp := <-e.keepAliveChan:
+				invokeHandler(*rsp)
+				// 续约失败退出
+				if rsp == nil {
+					goto END
+				}
+			}
+			time.Sleep(1 * time.Second)
 		}
-	}
+	END:
+	}()
 }
 
 /* 释放资源 */
@@ -84,6 +92,7 @@ func (e *EtcdRegister) setLease(leaseTime int64) (bool, error) {
 		return false, err
 	}
 	ctx, cancelFunc := context.WithCancel(context.TODO())
+	// 自动续租
 	keepAliveChan, err := lease.KeepAlive(ctx, leaseResp.ID)
 	if err != nil {
 		return false, err
