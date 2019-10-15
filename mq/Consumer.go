@@ -5,8 +5,6 @@ package mq
 */
 
 type Consumer interface {
-	// 消费消息
-	ConsumeMsg(invokeMethod func(msg interface{}))
 	// 释放资源
 	Destroy() error
 }

@@ -4,7 +4,6 @@ import (
 	"github.com/bsm/sarama-cluster"
 	"os"
 	"os/signal"
-	"strings"
 )
 
 /*
@@ -17,15 +16,22 @@ type KafkaConsumer struct {
 
 /* 创建kafka消费者实例 */
 func NewKafkaConsumer(conf KafkaConsumerConf) (*KafkaConsumer, error) {
-	consumer, err := cluster.NewConsumer(strings.Split(conf.BrokerServers, ","), conf.GroupId, []string{conf.TopicName}, conf.Config)
+	if conf.Config == nil {
+		conf.DefaultConsumerConfig()
+	}
+	consumer, err := cluster.NewConsumer(conf.BrokerServers, conf.GroupId, conf.TopicNames, conf.Config)
 	if err != nil {
 		return nil, err
 	}
-	return &KafkaConsumer{consumer: consumer}, nil
+	kc := &KafkaConsumer{consumer: consumer}
+	// 启动消费
+	go kc.start(conf.HandleMsg)
+
+	return kc, nil
 }
 
-/* 消费消息 */
-func (c *KafkaConsumer) ConsumeMsg(invokeMethod func(msg interface{})) {
+// 启动消费
+func (c *KafkaConsumer) start(invokeHandle func(msg string) error) {
 	// trap SIGINT to trigger a shutdown.
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt)
@@ -40,7 +46,10 @@ func (c *KafkaConsumer) ConsumeMsg(invokeMethod func(msg interface{})) {
 			// start a separate goroutine to consume messages
 			go func(pc cluster.PartitionConsumer) {
 				for msg := range pc.Messages() {
-					invokeMethod(msg)
+					er := invokeHandle(string(msg.Value))
+					if er == nil {
+						c.consumer.MarkOffset(msg, "")
+					}
 				}
 			}(part)
 		case <-signals:

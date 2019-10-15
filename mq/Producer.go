@@ -5,8 +5,10 @@ package mq
 */
 
 type Producer interface {
-	// 批量发送消息
-	BatchSend(key []byte, msgs [][]byte) (bool, error)
+	// 发送消息
+	SendSync(topic, sign string, msg []byte) (bool, error)
+	// 异步发送消息
+	SendAsync(topic, sign string, msg []byte, handleResult func(sendResult SendResult, e error)) error
 	// 释放资源
 	Destroy() error
 }

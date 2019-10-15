@@ -3,6 +3,7 @@ package kafka
 import (
 	"github.com/Shopify/sarama"
 	"github.com/bsm/sarama-cluster"
+	"time"
 )
 
 /*
@@ -11,23 +12,23 @@ import (
 /* 生产者配置 */
 type KafkaProducerConf struct {
 	// 服务地址和端口
-	BrokerServers string `json:"brokerServers"`
-	// 主题名
-	TopicName string `json:"topicName"`
+	BrokerServers []string
 	// 配置参数
-	Config *sarama.Config `json:"config"`
+	Config *sarama.Config
 }
 
 /* 消费者配置 */
 type KafkaConsumerConf struct {
 	// 服务地址和端口
-	BrokerServers string `json:"brokerServers"`
+	BrokerServers []string
 	// 主题名
-	TopicName string `json:"topicName"`
+	TopicNames []string
 	// 配置参数
-	Config *cluster.Config `json:"config"`
+	Config *cluster.Config
 	// 分组ID
-	GroupId string `json:"groupId"`
+	GroupId string
+	// 处理消息
+	HandleMsg func(msg string) error
 }
 
 /* 生产者默认配置 */
@@ -39,6 +40,10 @@ func (c *KafkaProducerConf) DefaultProducerConfig() {
 	config.Producer.Partitioner = sarama.NewRandomPartitioner
 	// 是否等待成功和失败后的响应
 	config.Producer.Return.Successes = true
+	// 返回失败通知
+	config.Producer.Return.Errors = true
+	// 超时时间默认10sec
+	config.Producer.Timeout = 8 * time.Second
 
 	c.Config = config
 }
@@ -46,6 +51,7 @@ func (c *KafkaProducerConf) DefaultProducerConfig() {
 /* 消费者默认配置 */
 func (c *KafkaConsumerConf) DefaultConsumerConfig() {
 	config := cluster.NewConfig()
+	// 分区消费模式
 	config.Group.Mode = cluster.ConsumerModePartitions
 
 	c.Config = config
