@@ -6,6 +6,7 @@ package kafka
 import (
 	"github.com/Shopify/sarama"
 	"github.com/nj-leegern/goprophet/mq"
+	"sync"
 	"time"
 )
 
@@ -13,6 +14,7 @@ type KafkaProducer struct {
 	producer       sarama.SyncProducer  // 同步
 	asyncProducer  sarama.AsyncProducer // 异步
 	callbackHandle func()               // 处理结果回调
+	once           sync.Once
 }
 
 /* 创建kafka生产者实例 */
@@ -53,10 +55,8 @@ func (p *KafkaProducer) SendSync(topic string, key string, msg []byte) (bool, er
 
 /* 异步发送消息 */
 func (p *KafkaProducer) SendAsync(topic, key string, msg []byte, handleResult func(sendResult mq.SendResult, e error)) error {
-	sign := make(chan int, 1)
-	if p.callbackHandle == nil {
+	p.once.Do(func() {
 		p.callbackHandle = func() {
-			sign <- 0
 			for {
 				select {
 				case success := <-p.asyncProducer.Successes():
@@ -86,9 +86,7 @@ func (p *KafkaProducer) SendAsync(topic, key string, msg []byte, handleResult fu
 			}
 		}
 		go p.callbackHandle()
-	}
-
-	<-sign
+	})
 
 	m := sarama.ProducerMessage{}
 	m.Topic = topic

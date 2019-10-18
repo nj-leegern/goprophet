@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
+	"runtime"
 )
 
 /*
@@ -28,6 +30,14 @@ func IsFile(f string) bool {
 		return false
 	}
 	return !fi.IsDir()
+}
+
+/* 获取指定路径的基层路径名 */
+func BasePath(filePath string) string {
+	if runtime.GOOS == "windows" {
+		filePath = filepath.ToSlash(filePath)
+	}
+	return path.Base(filePath)
 }
 
 /* 删除文件或文件夹 */

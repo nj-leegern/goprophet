@@ -9,39 +9,76 @@ import (
 )
 
 /*
- * http请求客户端
+ * http请求工具类
  */
 
 // 默认超时时间
 const REQ_TIMEOUT = 5 * time.Second
 
+type options struct {
+	requestUrl     string        // 请求URL
+	requestParams  interface{}   // 请求参数
+	requestMethod  string        // 请求方法 POST or GET
+	basicAuth      string        // basic auth认证
+	requestTimeout time.Duration // 请求超时时间
+}
+
 // 请求参数
-type RequestOptions struct {
-	RequestUrl     string        // 请求URL
-	RequestParams  interface{}   // 请求参数
-	RequestMethod  string        // 请求方法 get or post
-	BasicAuth      string        // basic auth认证
-	RequestTimeout time.Duration // 请求超时时间
-	ResultData     interface{}   // 返回结果
+type RequestOptions options
+
+// 请求URL
+func (opt *RequestOptions) Url(url string) *RequestOptions {
+	opt.requestUrl = url
+	return opt
+}
+
+// 请求参数
+func (opt *RequestOptions) Params(params interface{}) *RequestOptions {
+	opt.requestParams = params
+	return opt
+}
+
+// 请求方法
+func (opt *RequestOptions) Method(method string) *RequestOptions {
+	opt.requestMethod = method
+	return opt
+}
+
+// basic auth认证
+func (opt *RequestOptions) BasicAuth(basicAuth string) *RequestOptions {
+	opt.basicAuth = basicAuth
+	return opt
+}
+
+// 请求超时时间
+func (opt *RequestOptions) Timeout(timeout time.Duration) *RequestOptions {
+	opt.requestTimeout = timeout
+	return opt
 }
 
 /* http请求返回结果 */
-func DoExecute(ops RequestOptions) error {
-	return doHttpPost(ops.ResultData, ops.RequestParams, ops.BasicAuth, ops.RequestUrl, ops.RequestMethod, ops.RequestTimeout)
+func DoHttpExecute(result interface{}, ops *RequestOptions) error {
+	return doHttpPost(result, ops)
 }
 
 // http请求
-func doHttpPost(result interface{}, params interface{}, basicAuth string, url string, method string, timeout time.Duration) error {
+func doHttpPost(result interface{}, ops *RequestOptions) error {
 	var err error
 	var request *http.Request
-	if params != nil {
-		bytesData, err := json.Marshal(params)
+	var method = ops.requestMethod
+
+	if len(method) <= 0 {
+		method = "POST"
+	}
+
+	if ops.requestParams != nil {
+		bytesData, err := json.Marshal(ops.requestParams)
 		if err != nil {
 			return err
 		}
-		request, err = http.NewRequest(method, url, bytes.NewReader(bytesData))
+		request, err = http.NewRequest(method, ops.requestUrl, bytes.NewReader(bytesData))
 	} else {
-		request, err = http.NewRequest(method, url, nil)
+		request, err = http.NewRequest(method, ops.requestUrl, nil)
 	}
 
 	if err != nil {
@@ -49,9 +86,10 @@ func doHttpPost(result interface{}, params interface{}, basicAuth string, url st
 	}
 
 	request.Header.Set("Content-Type", "application/json;charset=UTF-8")
-	if len(basicAuth) > 0 {
-		request.Header.Set("Authorization", basicAuth)
+	if len(ops.basicAuth) > 0 {
+		request.Header.Set("Authorization", ops.basicAuth)
 	}
+	timeout := ops.requestTimeout
 	if timeout.Nanoseconds() <= 0 {
 		timeout = REQ_TIMEOUT
 	}
