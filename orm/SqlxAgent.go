@@ -1,6 +1,7 @@
 package orm
 
 import (
+	"crypto/md5"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
@@ -8,6 +9,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pkg/errors"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 )
@@ -30,20 +32,20 @@ type SqlxAgent struct {
 func NewMysqlAgent(ops ...Option) (*SqlxAgent, error) {
 	option := parseOptions(ops...)
 	dsName := fmt.Sprintf("%s:%s@(%s)/%s?charset=utf8mb4&parseTime=true&loc=%s", option.username, option.password, option.hostname, option.database, url.QueryEscape("Asia/Shanghai"))
-	return newInstance(DIALECT_MYSQL, dsName, int64(option.maxIdleConns), int64(option.maxOpenConns), option.connMaxLifetime.Nanoseconds())
+	return newInstance(generateDialectKey(option, DIALECT_MYSQL), dsName, int64(option.maxIdleConns), int64(option.maxOpenConns), option.connMaxLifetime.Nanoseconds())
 }
 
 /* 实例化sqlite3代理 */
 func NewSqliteAgent(ops ...Option) (*SqlxAgent, error) {
 	option := parseOptions(ops...)
-	return newInstance(DIALECT_SQLITE3, option.database, int64(option.maxIdleConns), int64(option.maxOpenConns), option.connMaxLifetime.Nanoseconds())
+	return newInstance(generateDialectKey(option, DIALECT_SQLITE3), option.database, int64(option.maxIdleConns), int64(option.maxOpenConns), option.connMaxLifetime.Nanoseconds())
 }
 
 /* 实例化postgres代理 */
 func NewPostgresAgent(ops ...Option) (*SqlxAgent, error) {
 	option := parseOptions(ops...)
 	dsName := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=verify-full", option.username, option.password, option.hostname, option.database)
-	return newInstance(DIALECT_PG, dsName, int64(option.maxIdleConns), int64(option.maxOpenConns), option.connMaxLifetime.Nanoseconds())
+	return newInstance(generateDialectKey(option, DIALECT_PG), dsName, int64(option.maxIdleConns), int64(option.maxOpenConns), option.connMaxLifetime.Nanoseconds())
 }
 
 // 实例化sqlxAgent
@@ -70,6 +72,7 @@ func newInstance(dialectName, dsName string, args ...int64) (*SqlxAgent, error) 
 				db.SetConnMaxLifetime(time.Duration(args[2]) * time.Nanosecond)
 			}
 			dialect.DB = db
+			return dialect, nil
 		}
 	}
 	return nil, ErrSqlxAgent
@@ -82,4 +85,10 @@ func parseOptions(ops ...Option) options {
 		apply(&defaultOps)
 	}
 	return defaultOps
+}
+
+// 生成数据源方言KEY
+func generateDialectKey(ops options, dialectName string) string {
+	data := md5.Sum([]byte(strings.Join([]string{dialectName, ops.hostname, ops.database, ops.username}, "_")))
+	return string(data[:])
 }

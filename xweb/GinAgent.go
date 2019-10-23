@@ -33,6 +33,8 @@ type Options struct {
 /* 创建Gin agent实例 */
 func NewGinAgent(port uint64, logPath string, options ...Options) *GinAgent {
 
+	fmt.Println("initializing gin agent ...")
+
 	gin.SetMode(gin.ReleaseMode)
 	engine := gin.Default()
 	engine.Use(generateGinLog(logPath), cors())
@@ -78,7 +80,9 @@ func NewGinAgent(port uint64, logPath string, options ...Options) *GinAgent {
 
 /* 启动Gin agent */
 func (ga *GinAgent) RunAgent() error {
-	err := ga.engine.Run(":" + strconv.FormatUint(ga.port, 10))
+	port := strconv.FormatUint(ga.port, 10)
+	fmt.Printf("gin agent start with port %s\n", port)
+	err := ga.engine.Run(":" + port)
 	return err
 }
 
