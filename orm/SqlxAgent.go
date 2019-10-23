@@ -32,25 +32,25 @@ type SqlxAgent struct {
 func NewMysqlAgent(ops ...Option) (*SqlxAgent, error) {
 	option := parseOptions(ops...)
 	dsName := fmt.Sprintf("%s:%s@(%s)/%s?charset=utf8mb4&parseTime=true&loc=%s", option.username, option.password, option.hostname, option.database, url.QueryEscape("Asia/Shanghai"))
-	return newInstance(generateDialectKey(option, DIALECT_MYSQL), dsName, int64(option.maxIdleConns), int64(option.maxOpenConns), option.connMaxLifetime.Nanoseconds())
+	return newInstance(generateDialectKey(option, DIALECT_MYSQL), DIALECT_MYSQL, dsName, int64(option.maxIdleConns), int64(option.maxOpenConns), option.connMaxLifetime.Nanoseconds())
 }
 
 /* 实例化sqlite3代理 */
 func NewSqliteAgent(ops ...Option) (*SqlxAgent, error) {
 	option := parseOptions(ops...)
-	return newInstance(generateDialectKey(option, DIALECT_SQLITE3), option.database, int64(option.maxIdleConns), int64(option.maxOpenConns), option.connMaxLifetime.Nanoseconds())
+	return newInstance(generateDialectKey(option, DIALECT_SQLITE3), DIALECT_SQLITE3, option.database, int64(option.maxIdleConns), int64(option.maxOpenConns), option.connMaxLifetime.Nanoseconds())
 }
 
 /* 实例化postgres代理 */
 func NewPostgresAgent(ops ...Option) (*SqlxAgent, error) {
 	option := parseOptions(ops...)
 	dsName := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=verify-full", option.username, option.password, option.hostname, option.database)
-	return newInstance(generateDialectKey(option, DIALECT_PG), dsName, int64(option.maxIdleConns), int64(option.maxOpenConns), option.connMaxLifetime.Nanoseconds())
+	return newInstance(generateDialectKey(option, DIALECT_PG), DIALECT_PG, dsName, int64(option.maxIdleConns), int64(option.maxOpenConns), option.connMaxLifetime.Nanoseconds())
 }
 
 // 实例化sqlxAgent
-func newInstance(dialectName, dsName string, args ...int64) (*SqlxAgent, error) {
-	actual, loaded := dialects.LoadOrStore(dialectName, &SqlxAgent{})
+func newInstance(dialectKey, dialectName, dsName string, args ...int64) (*SqlxAgent, error) {
+	actual, loaded := dialects.LoadOrStore(dialectKey, &SqlxAgent{})
 	if dialect, ok := actual.(*SqlxAgent); ok {
 		if loaded && dialect.DB != nil {
 			return dialect, nil
