@@ -2,6 +2,7 @@ package orm
 
 import (
 	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
@@ -90,5 +91,5 @@ func parseOptions(ops ...Option) options {
 // 生成数据源方言KEY
 func generateDialectKey(ops options, dialectName string) string {
 	data := md5.Sum([]byte(strings.Join([]string{dialectName, ops.hostname, ops.database, ops.username}, "_")))
-	return string(data[:])
+	return hex.EncodeToString(data[:])
 }
