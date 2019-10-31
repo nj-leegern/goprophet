@@ -2,43 +2,51 @@ package rocketmq
 
 import (
 	"git.oschina.net/cloudzone/cloudmq-go-client/cloudmq"
-	"strings"
 )
 
 type DidaRocketConsumer struct {
-	// nameSrv_topic -> consumer
+	// nameSrv -> consumer
 	clusterConsumer map[string]cloudmq.Consumer
+	// topic -> handleMsg
+	consumerHandler map[string]Subscription
 }
 
 /* 创建消费端实例 */
 func NewDidaRocketConsumer(conf RocketConsumerConf) (*DidaRocketConsumer, error) {
 	clusterConsumer := make(map[string]cloudmq.Consumer, len(conf.NameServers))
+	for _, nameServer := range conf.NameServers {
+		consumer, err := cloudmq.NewDefaultConsumer(conf.GroupName, &cloudmq.Config{
+			Nameserver:   nameServer,
+			InstanceName: "DEFAULT",
+		})
+		if err != nil {
+			return nil, err
+		}
+		clusterConsumer[nameServer] = consumer
+	}
+
+	consumerHandler := make(map[string]Subscription, len(conf.Subscribers))
 	for _, subscriber := range conf.Subscribers {
-		for _, nameServer := range conf.NameServers {
-			consumer, err := cloudmq.NewDefaultConsumer(conf.GroupName, &cloudmq.Config{
-				Nameserver:   nameServer,
-				InstanceName: "DEFAULT",
-			})
-			if err != nil {
-				return nil, err
-			}
+		consumerHandler[subscriber.TopicName] = subscriber
+	}
+
+	for _, consumer := range clusterConsumer {
+		for _, subscriber := range conf.Subscribers {
 			// 订阅消息
 			consumer.Subscribe(subscriber.TopicName, "*")
-			consumer.RegisterMessageListener(func(msgs []*cloudmq.MessageExt) (int, error) {
-				messages := make([]string, 0)
-				for _, msg := range msgs {
-					messages = append(messages, string(msg.Body))
-				}
-				// 消息处理回调
-				err := subscriber.HandleMsg(messages)
-				if err != nil {
-					return cloudmq.Action.ReconsumeLater, err
-				}
-				return cloudmq.Action.CommitMessage, nil
-			})
-			key := strings.Join([]string{nameServer, subscriber.TopicName}, "_")
-			clusterConsumer[key] = consumer
 		}
+		consumer.RegisterMessageListener(func(msgs []*cloudmq.MessageExt) (int, error) {
+			for _, msg := range msgs {
+				if handler, ok := consumerHandler[msg.Topic]; ok {
+					// 消息处理回调
+					err := handler.HandleMsg([]string{string(msg.Body)})
+					if err != nil {
+						return cloudmq.Action.ReconsumeLater, err
+					}
+				}
+			}
+			return cloudmq.Action.CommitMessage, nil
+		})
 	}
 
 	if len(clusterConsumer) > 0 {
