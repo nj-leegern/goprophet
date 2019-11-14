@@ -37,7 +37,7 @@ func NewKafkaProducer(conf KafkaProducerConf) (*KafkaProducer, error) {
 
 /* 发送消息 */
 func (p *KafkaProducer) SendSync(topic string, key string, msg []byte) (bool, error) {
-	messages := make([]*sarama.ProducerMessage, 1, 1)
+	messages := make([]*sarama.ProducerMessage, 0)
 
 	m := sarama.ProducerMessage{}
 	m.Topic = topic

@@ -1,8 +1,11 @@
 package redis
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"errors"
 	"github.com/go-redis/redis"
+	"strings"
 	"sync"
 )
 
@@ -10,32 +13,80 @@ import (
 	redis agent
 */
 
+const (
+	TYPE_SINGLE  = "single"
+	TYPE_CLUSTER = "cluster"
+)
+
 var (
-	client         *redis.Client
-	clusterClient  *redis.ClusterClient
-	mutex          sync.Mutex
+	clients        sync.Map
 	ErrRedisAgent  = errors.New("create redis client failed")
 	ErrRedisOption = errors.New("server address not null")
 )
 
 type RedisAgent struct {
 	Client *redis.Client
+	mutex  sync.Mutex
 }
 
 type RedisClusterAgent struct {
 	ClusterClient *redis.ClusterClient
+	mutex         sync.Mutex
 }
 
 /* 创建redis agent实例 */
 func NewRedisAgent(ops ...Option) (*RedisAgent, error) {
-	if client == nil {
-		mutex.Lock()
-		defer mutex.Unlock()
-		if client == nil {
-			defaultOps := parseOptions(ops...)
-			if len(defaultOps.serverAddrs) == 0 {
-				return nil, ErrRedisOption
-			}
+	// 创建单实例客户端
+	agent, err := createAgent(TYPE_SINGLE, ops...)
+	if err != nil {
+		return nil, err
+	}
+	if redisAgent, ok := agent.(*RedisAgent); ok {
+		return redisAgent, nil
+	}
+	return nil, ErrRedisAgent
+}
+
+/* 创建redis cluster agent实例 */
+func NewRedisClusterAgent(ops ...Option) (*RedisClusterAgent, error) {
+	// 创建集群客户端
+	agent, err := createAgent(TYPE_CLUSTER, ops...)
+	if err != nil {
+		return nil, err
+	}
+	if clusterAgent, ok := agent.(*RedisClusterAgent); ok {
+		return clusterAgent, nil
+	}
+	return nil, ErrRedisAgent
+}
+
+// 创建redis客户端
+func createAgent(agentType string, ops ...Option) (interface{}, error) {
+	defaultOps := parseOptions(ops...)
+	if len(defaultOps.serverAddrs) == 0 {
+		return nil, ErrRedisOption
+	}
+	params := make([]string, 0)
+	for _, addr := range defaultOps.serverAddrs {
+		params = append(params, addr)
+	}
+	params = append(params, agentType)
+	agentKey := generateAgentKey(params)
+	var agent interface{}
+	if agentType == TYPE_CLUSTER {
+		agent = &RedisClusterAgent{}
+	} else {
+		agent = &RedisAgent{}
+	}
+	actual, loaded := clients.LoadOrStore(agentKey, agent)
+	// single node
+	if agent, ok := actual.(*RedisAgent); ok {
+		if loaded && agent.Client != nil {
+			return agent, nil
+		} else {
+			agent.mutex.Lock()
+			defer agent.mutex.Unlock()
+
 			cc := redis.NewClient(&redis.Options{
 				Addr:         defaultOps.serverAddrs[0],
 				Password:     defaultOps.password,
@@ -52,19 +103,18 @@ func NewRedisAgent(ops ...Option) (*RedisAgent, error) {
 			if err != nil {
 				return nil, err
 			}
-			client = cc
+			agent.Client = cc
+			return agent, nil
 		}
 	}
-	return &RedisAgent{Client: client}, nil
-}
+	// cluster node
+	if agent, ok := actual.(*RedisClusterAgent); ok {
+		if loaded && agent.ClusterClient != nil {
+			return agent, nil
+		} else {
+			agent.mutex.Lock()
+			defer agent.mutex.Unlock()
 
-/* 创建redis cluster agent实例 */
-func NewRedisClusterAgent(ops ...Option) (*RedisClusterAgent, error) {
-	if clusterClient == nil {
-		mutex.Lock()
-		defer mutex.Unlock()
-		if clusterClient == nil {
-			defaultOps := parseOptions(ops...)
 			cc := redis.NewClusterClient(&redis.ClusterOptions{
 				Addrs:        defaultOps.serverAddrs,
 				Password:     defaultOps.password,
@@ -80,10 +130,12 @@ func NewRedisClusterAgent(ops ...Option) (*RedisClusterAgent, error) {
 			if err != nil {
 				return nil, err
 			}
-			clusterClient = cc
+			agent.ClusterClient = cc
+			return agent, nil
 		}
 	}
-	return &RedisClusterAgent{ClusterClient: clusterClient}, nil
+
+	return nil, ErrRedisAgent
 }
 
 // 解析配置项
@@ -93,4 +145,10 @@ func parseOptions(ops ...Option) options {
 		apply(&defaultOps)
 	}
 	return defaultOps
+}
+
+// 生成agent实例KEY
+func generateAgentKey(params []string) string {
+	data := md5.Sum([]byte(strings.Join(params, "_")))
+	return hex.EncodeToString(data[:])
 }

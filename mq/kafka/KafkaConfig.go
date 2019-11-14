@@ -21,12 +21,18 @@ type KafkaProducerConf struct {
 type KafkaConsumerConf struct {
 	// 服务地址和端口
 	BrokerServers []string
-	// 主题名
-	TopicNames []string
 	// 配置参数
 	Config *cluster.Config
 	// 分组ID
 	GroupId string
+	// 订阅者
+	Subscribers []KafkaSubscriber
+}
+
+/* 消费订阅者 */
+type KafkaSubscriber struct {
+	// 订阅主题名
+	TopicName string
 	// 处理消息
 	HandleMsg func(msg string) error
 }
