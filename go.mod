@@ -5,7 +5,6 @@ go 1.12
 require (
 	git.oschina.net/cloudzone/cloudmq-go-client v0.0.0-20171228070935-f79fc4bb764a
 	github.com/Shopify/sarama v1.23.1
-	github.com/apache/rocketmq-client-go v0.0.0-20190719094155-f38894a34ad4
 	github.com/astaxie/beego v1.12.0 // indirect
 	github.com/bsm/sarama-cluster v2.1.15+incompatible
 	github.com/coreos/bbolt v1.3.3 // indirect
@@ -36,6 +35,7 @@ require (
 	github.com/lestrrat-go/strftime v0.0.0-20190725011945-5c849dd2c51d // indirect
 	github.com/lib/pq v1.0.0
 	github.com/mattn/go-sqlite3 v1.10.0
+	github.com/nj-leegern/rocketmq-client-go v0.0.1
 	github.com/onsi/ginkgo v1.10.2 // indirect
 	github.com/onsi/gomega v1.7.0 // indirect
 	github.com/pkg/errors v0.8.1
@@ -45,10 +45,10 @@ require (
 	github.com/rifflock/lfshook v0.0.0-20180920164130-b9218ef580f5
 	github.com/shiena/ansicolor v0.0.0-20151119151921-a422bbe96644 // indirect
 	github.com/sirupsen/logrus v1.4.2
-	github.com/smartystreets/goconvey v0.0.0-20190731233626-505e41936337 // indirect
+	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/soheilhy/cmux v0.1.4 // indirect
 	github.com/tebeka/strftime v0.1.3 // indirect
-	github.com/tidwall/gjson v1.3.2 // indirect
+	github.com/tidwall/gjson v1.3.5 // indirect
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 // indirect
 	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
 	go.etcd.io/bbolt v1.3.3 // indirect
