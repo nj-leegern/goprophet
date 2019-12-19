@@ -15,17 +15,27 @@ import (
 type RocketConsumer struct {
 	// topic -> consumer
 	consumers map[string]rocketmq.PushConsumer
+	// topic -> handleMsg
+	handlers map[string]Subscription
 }
 
 /* 创建RocketMQ消费端实例 */
 func NewRocketConsumer(conf RocketConsumerConf) (*RocketConsumer, error) {
+	client := RocketConsumer{}
 	consumers := make(map[string]rocketmq.PushConsumer, 0)
+	handlers := make(map[string]Subscription, 0)
 	subscribers := conf.Subscribers
+
 	for _, subscriber := range subscribers {
+		handlers[subscriber.TopicName] = subscriber
+	}
+
+	for _, subscriber := range subscribers {
+		groupName := strings.Join([]string{conf.GroupName, subscriber.TopicName}, "_")
 		// 实例化consumer
 		c, err := rocketmq.NewPushConsumer(
 			consumer.WithNameServer(conf.NameServers),
-			consumer.WithGroupName(strings.Join([]string{conf.GroupName, subscriber.TopicName}, "_")),
+			consumer.WithGroupName(groupName),
 			consumer.WithConsumerModel(consumer.Clustering),
 			consumer.WithConsumeFromWhere(consumer.ConsumeFromLastOffset),
 			consumer.WithConsumerOrder(conf.ConsumerOrder),
@@ -41,29 +51,27 @@ func NewRocketConsumer(conf RocketConsumerConf) (*RocketConsumer, error) {
 		}
 		// 订阅消息
 		err = c.Subscribe(subscriber.TopicName, selector, func(ctx context.Context, msgs ...*primitive.MessageExt) (consumer.ConsumeResult, error) {
-			messages := make([]string, 0)
 			for _, msg := range msgs {
-				messages = append(messages, string(msg.Body))
-			}
-			// 消息处理回调
-			err = subscriber.HandleMsg(messages)
-			if err != nil {
-				return consumer.ConsumeRetryLater, err
+				// 消息回调处理
+				err = handlers[msg.Topic].HandleMsg([]string{string(msg.Body)})
+				if err != nil {
+					return consumer.ConsumeRetryLater, err
+				}
 			}
 			return consumer.ConsumeSuccess, nil
 		})
 		if err != nil {
 			return nil, err
 		}
-		consumers[subscriber.TopicName] = c
-	}
-	// 启动
-	for _, consumer := range consumers {
-		if err := consumer.Start(); err != nil {
+		// 启动
+		if err := c.Start(); err != nil {
 			return nil, err
 		}
+		consumers[subscriber.TopicName] = c
 	}
-	return &RocketConsumer{consumers: consumers}, nil
+	client.consumers = consumers
+	client.handlers = handlers
+	return &client, nil
 }
 
 /* 释放资源 */
