@@ -20,7 +20,11 @@ func ConvertDateToStr(date time.Time, pattern string) string {
 
 /* 时间串转换日期 */
 func ConvertStrToDate(date, pattern string) (time.Time, error) {
-	return time.Parse(date, pattern)
+	loc, err := time.LoadLocation("Local")
+	if err != nil {
+		return time.Time{}, err
+	}
+	return time.ParseInLocation(pattern, date, loc)
 }
 
 /* 时间串转换时间戳 */
