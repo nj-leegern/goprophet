@@ -10,11 +10,11 @@ import (
 */
 
 /* 异常处理 */
-func HandleException() string {
+func HandleException() (string, interface{}) {
 	if err := recover(); err != nil {
-		return fmt.Sprintf("error: %s, stack trace: %s", err, printStack())
+		return fmt.Sprintf("error: %s, stack trace: %s", err, printStack()), err
 	}
-	return ""
+	return "", nil
 }
 
 /* 打印调用栈 */
