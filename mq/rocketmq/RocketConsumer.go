@@ -2,9 +2,9 @@ package rocketmq
 
 import (
 	"context"
-	"github.com/nj-leegern/rocketmq-client-go"
-	"github.com/nj-leegern/rocketmq-client-go/consumer"
-	"github.com/nj-leegern/rocketmq-client-go/primitive"
+	"github.com/swift9/rocketmq-client-go/v2"
+	"github.com/swift9/rocketmq-client-go/v2/consumer"
+	"github.com/swift9/rocketmq-client-go/v2/primitive"
 	"strings"
 )
 

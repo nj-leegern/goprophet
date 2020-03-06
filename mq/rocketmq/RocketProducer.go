@@ -3,9 +3,9 @@ package rocketmq
 import (
 	"context"
 	"github.com/nj-leegern/goprophet/mq"
-	"github.com/nj-leegern/rocketmq-client-go"
-	"github.com/nj-leegern/rocketmq-client-go/primitive"
-	"github.com/nj-leegern/rocketmq-client-go/producer"
+	"github.com/swift9/rocketmq-client-go/v2"
+	"github.com/swift9/rocketmq-client-go/v2/primitive"
+	"github.com/swift9/rocketmq-client-go/v2/producer"
 )
 
 /*
