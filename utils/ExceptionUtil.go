@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"runtime"
+	"strings"
 )
 
 /*
@@ -20,6 +21,16 @@ func HandleException() (string, error) {
 		}
 	}
 	return "", nil
+}
+
+/* 输出错误信息 */
+func GetStackTrace(e interface{}) string {
+	items := make([]string, 0)
+	if msg, ok := e.(string); ok {
+		items = append(items, fmt.Sprintf("error: %s", msg))
+	}
+	items = append(items, fmt.Sprintf("stack trace: %s", printStack()))
+	return strings.Join(items, "\n")
 }
 
 /* 打印调用栈 */
