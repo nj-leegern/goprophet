@@ -36,7 +36,8 @@ func NewKafkaProducer(conf KafkaProducerConf) (*KafkaProducer, error) {
 }
 
 /* 发送消息 */
-func (p *KafkaProducer) SendSync(topic string, key string, msg []byte) (bool, error) {
+func (p *KafkaProducer) SendSync(topic string, key string, msg []byte) (mq.SendResult, error) {
+	sr := mq.SendResult{}
 	messages := make([]*sarama.ProducerMessage, 0)
 
 	m := sarama.ProducerMessage{}
@@ -48,9 +49,17 @@ func (p *KafkaProducer) SendSync(topic string, key string, msg []byte) (bool, er
 
 	err := p.producer.SendMessages(messages)
 	if err != nil {
-		return false, err
+		return sr, err
 	}
-	return true, nil
+	result := mq.KafkaResult{
+		Topic:     m.Topic,
+		Key:       []byte(key),
+		Value:     msg,
+		Offset:    m.Offset,
+		Partition: m.Partition,
+	}
+	sr.KafkaResult = result
+	return sr, nil
 }
 
 /* 异步发送消息 */

@@ -36,17 +36,31 @@ func NewRocketProducer(nameServers []string, retries int) (*RocketProducer, erro
 }
 
 /* 发送消息 */
-func (p *RocketProducer) SendSync(topic string, tag string, msg []byte) (bool, error) {
+func (p *RocketProducer) SendSync(topic string, tag string, msg []byte) (mq.SendResult, error) {
+	sr := mq.SendResult{}
 	m := primitive.NewMessage(topic, msg)
 	if len(tag) > 0 {
 		// 目前版本不支持TAG
 		//m.WithTag(tag)  // expression
 	}
-	_, err := p.p.SendSync(context.Background(), m)
+	result, err := p.p.SendSync(context.Background(), m)
 	if err != nil {
-		return false, err
+		return sr, err
 	}
-	return true, nil
+	rr := mq.RocketMqResult{
+		MsgID:         result.MsgID,
+		QueueOffset:   result.QueueOffset,
+		TransactionID: result.TransactionID,
+		OffsetMsgID:   result.OffsetMsgID,
+	}
+	queue := result.MessageQueue
+	if queue != nil {
+		rr.Topic = queue.Topic
+		rr.BrokerName = queue.BrokerName
+		rr.QueueId = queue.QueueId
+	}
+	sr.RocketResult = rr
+	return sr, nil
 }
 
 /* 异步发送消息 */
