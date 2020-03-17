@@ -18,10 +18,34 @@ type RocketProducer struct {
 
 /* 创建RocketMQ生产者实例 */
 func NewRocketProducer(nameServers []string, retries int) (*RocketProducer, error) {
-	p, err := rocketmq.NewProducer(
-		producer.WithNameServer(nameServers),
-		producer.WithRetry(retries),
+	return newRocketProducer(nameServers, retries, false)
+}
+
+/* 创建有序消息RocketMQ生产者实例 */
+func NewOrderlyRocketProducer(nameServers []string, retries int) (*RocketProducer, error) {
+	return newRocketProducer(nameServers, retries, true)
+}
+
+// 创建producer实例
+func newRocketProducer(nameServers []string, retries int, orderly bool) (*RocketProducer, error) {
+	var (
+		p   rocketmq.Producer
+		err error
 	)
+	// 有序消息
+	if orderly {
+		p, err = rocketmq.NewProducer(
+			producer.WithNameServer(nameServers),
+			producer.WithRetry(retries),
+			producer.WithQueueSelector(producer.NewHashQueueSelector()),
+		)
+	} else {
+		p, err = rocketmq.NewProducer(
+			producer.WithNameServer(nameServers),
+			producer.WithRetry(retries),
+		)
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -36,12 +60,11 @@ func NewRocketProducer(nameServers []string, retries int) (*RocketProducer, erro
 }
 
 /* 发送消息 */
-func (p *RocketProducer) SendSync(topic string, tag string, msg []byte) (mq.SendResult, error) {
+func (p *RocketProducer) SendSync(topic string, key string, msg []byte) (mq.SendResult, error) {
 	sr := mq.SendResult{}
 	m := primitive.NewMessage(topic, msg)
-	if len(tag) > 0 {
-		// 目前版本不支持TAG
-		//m.WithTag(tag)  // expression
+	if len(key) > 0 {
+		m.WithShardingKey(key)
 	}
 	result, err := p.p.SendSync(context.Background(), m)
 	if err != nil {
@@ -64,11 +87,10 @@ func (p *RocketProducer) SendSync(topic string, tag string, msg []byte) (mq.Send
 }
 
 /* 异步发送消息 */
-func (p *RocketProducer) SendAsync(topic, tag string, msg []byte, handleResult func(sendResult mq.SendResult, e error)) error {
+func (p *RocketProducer) SendAsync(topic, key string, msg []byte, handleResult func(sendResult mq.SendResult, e error)) error {
 	m := primitive.NewMessage(topic, msg)
-	if len(tag) > 0 {
-		// 目前版本不支持TAG
-		//m.WithTag(tag)  // expression
+	if len(key) > 0 {
+		m.WithShardingKey(key)
 	}
 	return p.p.SendAsync(context.Background(), func(i context.Context, result *primitive.SendResult, e error) {
 		rs := mq.RocketMqResult{
