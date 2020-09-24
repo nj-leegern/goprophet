@@ -37,7 +37,7 @@ func NewGinAgent(port uint64, logPath string, options ...Options) *GinAgent {
 
 	gin.SetMode(gin.ReleaseMode)
 	engine := gin.Default()
-	engine.Use(generateGinLog(logPath), cors())
+	engine.Use(generateGinLog(logPath))
 
 	for _, option := range options {
 		routes := option.Routes
