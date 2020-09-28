@@ -95,6 +95,7 @@ func createAgent(agentType string, ops ...Option) (interface{}, error) {
 				MinIdleConns: int(defaultOps.minIdleConns),
 				DialTimeout:  defaultOps.dialTimeout,
 				IdleTimeout:  defaultOps.idleTimeout,
+				MaxRetries:   2,
 			})
 			if cc == nil {
 				return nil, ErrRedisAgent
