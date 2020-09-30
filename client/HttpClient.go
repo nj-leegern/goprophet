@@ -16,11 +16,12 @@ import (
 const REQ_TIMEOUT = 5 * time.Second
 
 type options struct {
-	requestUrl     string        // 请求URL
-	requestParams  interface{}   // 请求参数
-	requestMethod  string        // 请求方法 POST or GET
-	basicAuth      string        // basic auth认证
-	requestTimeout time.Duration // 请求超时时间
+	requestUrl     string            // 请求URL
+	requestParams  interface{}       // 请求参数
+	requestMethod  string            // 请求方法 POST or GET
+	basicAuth      string            // basic auth认证
+	headers        map[string]string // 请求头参数
+	requestTimeout time.Duration     // 请求超时时间
 }
 
 // 请求参数
@@ -56,6 +57,12 @@ func (opt *RequestOptions) Timeout(timeout time.Duration) *RequestOptions {
 	return opt
 }
 
+// 请求头参数
+func (opt *RequestOptions) Headers(headers map[string]string) *RequestOptions {
+	opt.headers = headers
+	return opt
+}
+
 /* http请求返回结果 */
 func DoHttpExecute(result interface{}, ops *RequestOptions) error {
 	return doHttpPost(result, ops)
@@ -85,10 +92,17 @@ func doHttpPost(result interface{}, ops *RequestOptions) error {
 		return err
 	}
 
+	// set header
 	request.Header.Set("Content-Type", "application/json;charset=UTF-8")
 	if len(ops.basicAuth) > 0 {
 		request.Header.Set("Authorization", ops.basicAuth)
 	}
+	if ops.headers != nil && len(ops.headers) > 0 {
+		for key, val := range ops.headers {
+			request.Header.Set(key, val)
+		}
+	}
+
 	timeout := ops.requestTimeout
 	if timeout.Nanoseconds() <= 0 {
 		timeout = REQ_TIMEOUT
