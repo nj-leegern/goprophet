@@ -31,14 +31,21 @@ type Options struct {
 }
 
 /* 创建Gin agent实例 */
-func NewGinAgent(port uint64, logPath string, options ...Options) *GinAgent {
+func NewGinAgent(port uint64, logPath string, middleware []gin.HandlerFunc, options ...Options) *GinAgent {
 
 	fmt.Println("initializing gin agent ...")
 
 	gin.SetMode(gin.ReleaseMode)
 	engine := gin.Default()
-	engine.Use(generateGinLog(logPath), cors())
 
+	// default middleware
+	engine.Use(generateGinLog(logPath), cors())
+	// user middleware
+	if middleware != nil && len(middleware) > 0 {
+		engine.Use(middleware...)
+	}
+
+	// routes
 	for _, option := range options {
 		routes := option.Routes
 		if strings.ToUpper(option.Method) == "GET" {
