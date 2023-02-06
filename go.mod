@@ -53,8 +53,7 @@ require (
 	github.com/stretchr/testify v1.5.1 // indirect
 	github.com/swift9/rocketmq-client-go/v2 v2.0.0-rc5
 	github.com/tebeka/strftime v0.1.3 // indirect
-	github.com/tidwall/gjson v1.6.0 // indirect
-	github.com/tidwall/pretty v1.0.1 // indirect
+	github.com/tidwall/gjson v1.9.3 // indirect
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 // indirect
 	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
 	go.etcd.io/bbolt v1.3.3 // indirect
@@ -68,7 +67,6 @@ require (
 	golang.org/x/text v0.3.2 // indirect
 	golang.org/x/time v0.0.0-20190921001708-c4c64cad1fd0 // indirect
 	golang.org/x/tools v0.0.0-20200305224536-de023d59a5d1 // indirect
-	google.golang.org/appengine v1.4.0 // indirect
 	google.golang.org/grpc v1.24.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/jcmturner/goidentity.v3 v3.0.0 // indirect
